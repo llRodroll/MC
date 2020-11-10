@@ -1,0 +1,127 @@
+---
+title: "Optimización de Portafolios"
+author: "Rodrigo Velez"
+date: "09/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Borrar Environment
+
+```{r be}
+rm(list=ls())
+```
+
+# 1. Base de Datos
+
+```{r importar}
+library(readxl)
+acc <- read_excel("C:/Users/Rodro/Documents/R/OptimPort/AccCol.xlsx")
+```
+
+# 2. Retornos
+
+```{r retornos}
+N = ncol(acc)-1                                  # número de activos
+p = acc[,2:ncol(acc)]                            # extrae solo los precios de la base acc
+r = lapply(log(p),diff)                          # calcula los retornos logaritmicos para cada acción, pero los deja en formato lista
+r = matrix(unlist(r), ncol = N, byrow =  FALSE)  # convierte los retornos a un formato de matriz
+r = r*100                                        # números en porcentaje
+colnames(r) = colnames(p)                        # ponemos nombres a los retornos
+r = as.data.frame(r)                             # formato en data.frame
+```
+
+# 3. Retorno y Riesgo
+
+```{r reri}
+# Retorno
+er = lapply(r,mean)                                  # calcula el promedio de los retornos, la media
+er = as.numeric(er)                                  # convierte los retornos a un formato de número
+names(er) = colnames(p)                              # ponemos nombres
+
+# Riesgo
+ri = lapply(r,sd)                                    # calcula la desviación estandar, la volatilidad, el riesgo de cada acción
+ri = as.data.frame(ri)                               # formato de data.frame
+
+covmat = var(r)                                      # matriz de covarianza
+dimnames(covmat) = list(colnames(p),colnames(p))     # ponemos nombres
+```
+
+
+# 4. Libreria o Paquete
+
+```{r pck, warning=FALSE,message=FALSE}
+# install.packages("IntroCompFinR", repos="http://R-Forge.R-project.org") # solo es necesario correr la línea una vez
+library(IntroCompFinR)  # Introduction to computational finance in R University of Washington, Seattle.
+```
+
+# 5. Portafolios Eficientes
+
+## 5.1. Portafolio de Varianza Mínima
+
+```{r vm, warning=FALSE,message=FALSE}
+vm = globalMin.portfolio(er, covmat, shorts = FALSE)   # sin ventas en corto
+print(vm)
+plot(vm)
+```
+
+## 5.2. Portafolio de Máximo Retorno
+
+```{r mr, warning=FALSE,message=FALSE}
+mr = efficient.portfolio(er, covmat, max(er), shorts = FALSE)   # sin ventas en corto
+print(mr)
+plot(mr)
+```
+
+## 5.3. Portafolios "normales" - Intermedios
+
+```{r pm, warning=FALSE,message=FALSE}
+ro = 0.1                                                   # definir el retorno de deseo obtener
+pm = efficient.portfolio(er, covmat, ro, shorts = FALSE)   # sin ventas en corto
+print(pm)
+plot(pm)
+```
+
+# 6. Frontera Eficiente
+
+```{r ef, warning=FALSE,message=FALSE}
+ef = efficient.frontier(er, covmat, nport=20, shorts = FALSE)    # calcula la Frontera Eficiente
+
+plot(ef, plot.assets=FALSE, col="green", pch=16)                 # grafica la FE
+points(vm$sd, vm$er, col="blue", pch=16, cex=2)                  # resalta el portafolio de varianza mínima
+text(vm$sd, vm$er, labels="VAR. MIN", pos=2)
+points(mr$sd, mr$er, col="blue", pch=16, cex=2)                  # resalta el portafolio de máximo retorno
+text(mr$sd, mr$er, labels="RET. MAX", pos=2)
+```
+
+# 7. Capital Market Line
+
+## 7.1. Portafolio Tangente
+
+```{r pt, warning=FALSE,message=FALSE}
+rf = 0.005                                                        # tasa libre de riesgo
+pt = tangency.portfolio(er, covmat, rf, shorts = FALSE)           # sin ventas en corto
+print(pt)
+plot(pt)
+```
+
+## 7.2. CML
+
+```{r cml, warning=FALSE,message=FALSE}
+ef = efficient.frontier(er, covmat, nport=20, shorts = FALSE)    # calcula la Frontera Eficiente
+
+srt = (pt$er - rf)/pt$sd                                         # ratio de sharpe, pendiente de la CML
+
+plot(ef, plot.assets=FALSE, col="green", pch=16)                 # grafica la FE
+points(vm$sd, vm$er, col="blue", pch=16, cex=2)                  # resalta el portafolio de varianza mínima
+text(vm$sd, vm$er, labels="VAR. MIN", pos=2)
+points(mr$sd, mr$er, col="blue", pch=16, cex=2)                  # resalta el portafolio de máximo retorno
+text(mr$sd, mr$er, labels="RET. MAX", pos=2)
+points(pt$sd, pt$er, col="blue", pch=16, cex=2)                  # resalta el portafolio tangente
+text(pt$sd, pt$er, labels="PORT. TAN", pos=2)
+abline(a=rf, b=srt, col="red", lwd=2)
+```
+
