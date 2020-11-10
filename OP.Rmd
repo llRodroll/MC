@@ -19,7 +19,7 @@ rm(list=ls())
 
 ```{r importar}
 library(readxl)
-acc <- read_excel("C:/Users/Rodro/Documents/R/OptimPort/AccCol.xlsx")
+acc <- read_excel("C:/Users/Rodro/Documents/R/MC/AccCol.xlsx")
 ```
 
 # 2. Retornos
